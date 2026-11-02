@@ -27,6 +27,7 @@ import {
   regenerateInvitation,
   revokeInvitation,
 } from '@/lib/invitations';
+import { createPasswordReset, RESET_TTL_HOURS, ResetError, resetUrl } from '@/lib/password-reset';
 import { removeQuietly } from '@/lib/storage';
 import { zonedLocalToUtc } from '@/lib/time';
 import { emailField, firstError, nameField, str, uuidField } from '@/lib/validation';
@@ -354,5 +355,24 @@ export async function deleteAttachmentAction(formData: FormData): Promise<void> 
   if (deleted) {
     await removeQuietly([deleted.storageKey]);
     revalidatePath(`/admin/assignments/${deleted.assignmentId}`);
+  }
+}
+
+// ---------- Password reset links ----------
+
+export async function createPasswordResetAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const admin = await assertRole('admin');
+  const userId = uuidField.safeParse(str(formData, 'userId'));
+  if (!userId.success) return fail('المستخدم غير موجود');
+  try {
+    const token = await createPasswordReset(userId.data, admin.id);
+    return {
+      status: 'success',
+      message: `رابط تعيين كلمة مرور (صالح ${RESET_TTL_HOURS} ساعة ولمرة واحدة). أرسله لصاحب الحساب:`,
+      link: resetUrl(token),
+    };
+  } catch (err) {
+    if (err instanceof ResetError) return fail(err.message);
+    throw err;
   }
 }

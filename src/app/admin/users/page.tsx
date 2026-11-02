@@ -8,6 +8,7 @@ import { db } from '@/lib/db';
 import { groups, invitations, users } from '@/lib/db/schema';
 import { formatDateTime } from '@/lib/format';
 import {
+  createPasswordResetAction,
   inviteSupervisorAction,
   regenerateInvitationAction,
   revokeInvitationAction,
@@ -116,16 +117,26 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                         <td>{u.isActive ? <Badge tone="green">نشط</Badge> : <Badge tone="red">موقوف</Badge>}</td>
                         <td>
                           {u.id !== me.id ? (
-                            <form action={setUserActiveAction}>
-                              <input type="hidden" name="userId" value={u.id} />
-                              <input type="hidden" name="active" value={u.isActive ? 'false' : 'true'} />
-                              <ConfirmButton
-                                variant={u.isActive ? 'danger' : 'secondary'}
-                                message={u.isActive ? `إيقاف حساب ${u.name}؟ لن يستطيع الدخول وتبقى بياناته محفوظة.` : `إعادة تفعيل حساب ${u.name}؟`}
-                              >
-                                {u.isActive ? 'إيقاف' : 'تفعيل'}
-                              </ConfirmButton>
-                            </form>
+                            <div className="flex flex-col items-start gap-2">
+                              <form action={setUserActiveAction}>
+                                <input type="hidden" name="userId" value={u.id} />
+                                <input type="hidden" name="active" value={u.isActive ? 'false' : 'true'} />
+                                <ConfirmButton
+                                  variant={u.isActive ? 'danger' : 'secondary'}
+                                  message={u.isActive ? `إيقاف حساب ${u.name}؟ لن يستطيع الدخول وتبقى بياناته محفوظة.` : `إعادة تفعيل حساب ${u.name}؟`}
+                                >
+                                  {u.isActive ? 'إيقاف' : 'تفعيل'}
+                                </ConfirmButton>
+                              </form>
+                              {u.isActive ? (
+                                <ActionForm action={createPasswordResetAction}>
+                                  <input type="hidden" name="userId" value={u.id} />
+                                  <SubmitButton size="sm" variant="secondary" pendingText="جارٍ الإنشاء…">
+                                    رابط كلمة مرور جديدة
+                                  </SubmitButton>
+                                </ActionForm>
+                              ) : null}
+                            </div>
                           ) : (
                             <span className="text-xs text-gray-400">حسابك</span>
                           )}

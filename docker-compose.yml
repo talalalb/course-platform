@@ -1,0 +1,46 @@
+# Production-style setup on any Linux server (VPS):
+#   1) cp .env.example .env  and set DB_PASSWORD, APP_URL (your https:// domain)
+#   2) docker compose up -d --build
+#   3) docker compose exec app npm run create-admin   (with ADMIN_EMAIL / ADMIN_PASSWORD / ADMIN_NAME set in .env)
+# Put a reverse proxy with HTTPS (for example Caddy) in front of port 3000.
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: course
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      POSTGRES_DB: course_platform
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U course -d course_platform']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build:
+      context: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://course:${DB_PASSWORD}@db:5432/course_platform
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      APP_ENV: ${APP_ENV:-production}
+      APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Riyadh}
+      STORAGE_DIR: /app/storage
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_NAME: ${ADMIN_NAME:-}
+    volumes:
+      - uploads:/app/storage
+    ports:
+      - '127.0.0.1:3000:3000'
+
+volumes:
+  db-data:
+  uploads:
