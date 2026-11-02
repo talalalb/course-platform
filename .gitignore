@@ -1,0 +1,19 @@
+node_modules/
+.next/
+out/
+build/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# local env and data
+.env
+.env.local
+storage/
+storage-test/
+e2e/screenshots/
+e2e/.server.log
+
+# OS / editor
+.DS_Store
+*.log
