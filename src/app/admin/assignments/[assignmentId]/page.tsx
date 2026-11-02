@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { requireRole } from '@/lib/auth/current-user';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { asc, eq } from 'drizzle-orm';
@@ -15,6 +16,8 @@ import { AssignmentForm } from '../AssignmentForm';
 export const metadata: Metadata = { title: 'تعديل الواجب' };
 
 export default async function EditAssignmentPage({ params }: { params: Promise<{ assignmentId: string }> }) {
+  // Each page checks access itself: a layout's redirect does not stop the page from rendering.
+  await requireRole('admin');
   const { assignmentId } = await params;
   if (!isUuid(assignmentId)) notFound();
   const assignment = await db.query.assignments.findFirst({ where: eq(assignments.id, assignmentId) });
@@ -32,7 +35,7 @@ export default async function EditAssignmentPage({ params }: { params: Promise<{
         title={assignment.title}
         subtitle={
           <Link className="link" href={`/admin/courses/${assignment.courseId}`}>
-            ← {course?.title}
+            → {course?.title}
           </Link>
         }
         actions={<LinkButton href={`/staff/assignments/${assignment.id}`} variant="primary">عرض حلول الطلاب</LinkButton>}

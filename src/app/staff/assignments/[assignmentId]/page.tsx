@@ -44,7 +44,7 @@ export default async function AssignmentSubmissionsPage({ params }: { params: Pr
       />
 
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard label="سلّموا" value={`${stats.submitted} / ${rows.length}`} />
+        <StatCard label="سلّموا" value={`${stats.submitted} من ${rows.length}`} />
         <StatCard label="بانتظار التصحيح" value={stats.pending} tone={stats.pending > 0 ? 'warn' : 'default'} />
         <StatCard label="متأخر" value={stats.late} />
         <StatCard label="متوسط الدرجات" value={formatPercent(stats.averageGrade)} />
@@ -81,7 +81,7 @@ export default async function AssignmentSubmissionsPage({ params }: { params: Pr
                           <SubmissionStatusBadge status={r.status} isLate={r.isLate} dueAt={assignment.dueAt} now={now} />
                         </td>
                         <td className="text-xs">{formatDateTime(r.submittedAt)}</td>
-                        <td className="ltr">{r.grade !== null ? `${formatNumber(r.grade)} / ${assignment.maxScore}` : '—'}</td>
+                        <td>{r.grade !== null ? `${formatNumber(r.grade)} من ${assignment.maxScore}` : '—'}</td>
                         <td>
                           {r.submissionId ? (
                             <Link className={`btn btn-sm ${r.status === 'submitted' ? 'btn-primary' : 'btn-secondary'}`} href={`/staff/submissions/${r.submissionId}`}>

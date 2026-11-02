@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull } from 'drizzle-orm';
+import { and, eq, gt, inArray, isNull, ne, or } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { courses, groupStudents, groups, invitations, users } from '@/lib/db/schema';
 import { hashPassword } from '@/lib/auth/password';
@@ -17,11 +17,18 @@ export function inviteUrl(token: string): string {
   return `${base}/invite/${token}`;
 }
 
-async function revokePendingFor(email: string) {
+/**
+ * Revokes earlier pending invitations for this e-mail. For a student invitation, only the ones for the same
+ * course are replaced, so invitations to other courses keep working.
+ */
+async function revokePendingFor(email: string, courseId?: string) {
+  const sameScope = courseId
+    ? or(ne(invitations.role, 'student'), inArray(invitations.groupId, db.select({ id: groups.id }).from(groups).where(eq(groups.courseId, courseId))))
+    : undefined;
   await db
     .update(invitations)
     .set({ revokedAt: new Date() })
-    .where(and(eq(invitations.email, email), isNull(invitations.acceptedAt), isNull(invitations.revokedAt)));
+    .where(and(eq(invitations.email, email), isNull(invitations.acceptedAt), isNull(invitations.revokedAt), sameScope));
 }
 
 /** Adds an existing student account to a group, enforcing one group per course. */
@@ -58,7 +65,7 @@ export async function addStudentToGroup(input: {
     await enrollStudent(user.id, input.groupId);
     return { kind: 'enrolled', name: user.name };
   }
-  await revokePendingFor(input.email);
+  await revokePendingFor(input.email, group.courseId);
   const token = generateToken();
   await db.insert(invitations).values({
     email: input.email,
@@ -178,6 +185,29 @@ export async function acceptInvitation(input: { token: string; name: string; pas
       .returning({ id: users.id });
     if (inv.role === 'student' && group) {
       await tx.insert(groupStudents).values({ groupId: group.id, courseId: group.courseId, studentId: user.id });
+    }
+    if (inv.role === 'student') {
+      // The same person may have been invited to other courses too: enrol them there as well.
+      const others = await tx
+        .update(invitations)
+        .set({ acceptedAt: new Date() })
+        .where(
+          and(
+            eq(invitations.email, inv.email),
+            eq(invitations.role, 'student'),
+            isNull(invitations.acceptedAt),
+            isNull(invitations.revokedAt),
+            gt(invitations.expiresAt, new Date()),
+          ),
+        )
+        .returning({ groupId: invitations.groupId });
+      for (const other of others) {
+        if (!other.groupId) continue;
+        const g = await tx.query.groups.findFirst({ where: eq(groups.id, other.groupId) });
+        if (g) {
+          await tx.insert(groupStudents).values({ groupId: g.id, courseId: g.courseId, studentId: user.id }).onConflictDoNothing();
+        }
+      }
     }
     return { status: 'created' as const, userId: user.id };
   });

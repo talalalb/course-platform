@@ -29,6 +29,12 @@
 
 المتطلبات: Node.js 22.13 أو أحدث، و PostgreSQL 16.
 
+أنشئ مستخدم قاعدة البيانات وقاعدتي التشغيل والاختبار (مرة واحدة):
+
+```bash
+sudo -u postgres psql -c "CREATE ROLE course LOGIN PASSWORD 'course'" -c "CREATE DATABASE course_platform OWNER course" -c "CREATE DATABASE course_platform_test OWNER course"
+```
+
 ```bash
 cp .env.example .env          # عدّل DATABASE_URL إذا لزم
 npm ci
@@ -56,28 +62,40 @@ ADMIN_EMAIL=you@example.com ADMIN_PASSWORD='كلمة-مرور-طويلة' ADMIN_
 الأسهل استخدام Docker على خادم لينكس صغير (2 معالج / 4GB ذاكرة يكفي للبداية):
 
 1. انسخ المشروع إلى الخادم، ثم: `cp .env.example .env` وعدّل فيه:
-   - `DB_PASSWORD` كلمة مرور قوية لقاعدة البيانات
+   - `DB_PASSWORD` كلمة مرور قوية لقاعدة البيانات (تُعتمد عند أول تشغيل فقط؛ تغييرها لاحقاً يحتاج `ALTER USER course PASSWORD '...'` داخل قاعدة البيانات)
    - `APP_URL` رابط موقعك، مثل `https://courses.example.com`
    - `ADMIN_EMAIL` و `ADMIN_PASSWORD` و `ADMIN_NAME` لحساب المدير الأول
-2. شغّل: `docker compose up -d --build` (يُنشئ الجداول تلقائياً عند كل تشغيل).
+2. شغّل: `docker compose up -d --build` (يُنشئ الجداول تلقائياً عند كل تشغيل، ويعمل دائماً بوضع الإنتاج فيمنع تحميل البيانات التجريبية).
 3. أنشئ حساب المدير: `docker compose exec app npm run create-admin`
-4. ضع أمام المنفذ 3000 خادماً عكسياً يوفر HTTPS، مثل Caddy:
+4. ضع أمام المنفذ 3000 خادماً عكسياً يوفر HTTPS، مثل Caddy (يضيف عنوان الزائر تلقائياً، ويستخدمه الموقع للحد من محاولات الدخول):
 
    ```
    courses.example.com {
+       request_body {
+           max_size 60MB
+       }
+       header Strict-Transport-Security "max-age=31536000"
        reverse_proxy 127.0.0.1:3000
    }
    ```
 
 عندما يبدأ `APP_URL` بـ `https://` تصبح ملفات تعريف الدخول (cookies) آمنة تلقائياً.
 
-### النسخ الاحتياطي
+### النسخ الاحتياطي والاستعادة
 
-احفظ **شيئين** كل يوم: قاعدة البيانات، ومجلد الملفات المرفوعة.
+احفظ **شيئين** كل يوم: قاعدة البيانات، ومجلد الملفات المرفوعة، ثم **انسخهما خارج الخادم** (مثلاً بمهمة cron يومية إلى تخزين سحابي)، لأن فقدان الخادم يُفقد النسخ المحفوظة عليه.
 
 ```bash
-docker compose exec db pg_dump -U course course_platform > backup-$(date +%F).sql
+docker compose exec -T db pg_dump --clean --if-exists -U course course_platform > backup-$(date +%F).sql
 docker compose cp app:/app/storage ./storage-backup-$(date +%F)
+```
+
+الاستعادة:
+
+```bash
+docker compose exec -T db psql -U course course_platform < backup-YYYY-MM-DD.sql
+docker compose cp ./storage-backup-YYYY-MM-DD/. app:/app/storage
+docker compose exec -u root app chown -R node:node /app/storage
 ```
 
 ## الملفات المقبولة
@@ -89,8 +107,8 @@ docker compose cp app:/app/storage ./storage-backup-$(date +%F)
 ## الاختبارات
 
 ```bash
-npm test          # 49 اختباراً للصلاحيات والدعوات والرفع والحسابات (تحتاج قاعدة course_platform_test)
-npm run test:e2e  # اختبار متصفح كامل للأدوار الثلاثة مع لقطات شاشة (يحتاج الموقع شغالاً وبيانات تجريبية)
+npm test          # 53 اختباراً للصلاحيات والدعوات والرفع والحسابات (تحتاج قاعدة course_platform_test)
+npm run test:e2e  # 35 فحصاً في متصفح حقيقي للأدوار الثلاثة مع لقطات شاشة (يحتاج الموقع شغالاً وبيانات تجريبية)
 ```
 
 ## غير موجود في هذه النسخة (يمكن إضافته لاحقاً)

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { requireRole } from '@/lib/auth/current-user';
 import Link from 'next/link';
 import { sql } from 'drizzle-orm';
 import { ActionForm, SubmitButton } from '@/components/forms';
@@ -9,6 +10,8 @@ import { createCourseAction } from '../actions';
 export const metadata: Metadata = { title: 'الدورات' };
 
 export default async function CoursesPage() {
+  // Each page checks access itself: a layout's redirect does not stop the page from rendering.
+  await requireRole('admin');
   const result = await db.execute<{ id: string; title: string; groups: number; students: number; assignments: number }>(sql`
     SELECT c.id, c.title,
       (SELECT count(*)::int FROM groups g WHERE g.course_id = c.id) AS groups,

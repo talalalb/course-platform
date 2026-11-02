@@ -16,7 +16,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ ass
   const { assignmentId } = await params;
   if (!isUuid(assignmentId)) return jsonError('الواجب غير موجود', 404);
 
-  const length = Number(request.headers.get('content-length') ?? '0');
+  // Browsers always send Content-Length for these uploads; refusing requests without it keeps the size limit enforceable.
+  const length = Number(request.headers.get('content-length') ?? '');
+  if (!Number.isFinite(length) || length <= 0) return jsonError('تعذّر تحديد حجم الملفات، حاول مرة أخرى', 411);
   if (length > MAX_TOTAL_BYTES + 1024 * 1024) return jsonError('حجم الملفات أكبر من المسموح (50 ميجابايت)', 413);
   if (isRateLimited(`upload:${user.id}`, 30, 60 * 60 * 1000)) return jsonError('محاولات رفع كثيرة، حاول لاحقاً', 429);
 

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { requireRole } from '@/lib/auth/current-user';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { and, asc, eq, gt, isNull, ne } from 'drizzle-orm';
@@ -21,6 +22,8 @@ import {
 export const metadata: Metadata = { title: 'المجموعة' };
 
 export default async function GroupPage({ params }: { params: Promise<{ groupId: string }> }) {
+  // Each page checks access itself: a layout's redirect does not stop the page from rendering.
+  await requireRole('admin');
   const { groupId } = await params;
   if (!isUuid(groupId)) notFound();
   const group = await db.query.groups.findFirst({ where: eq(groups.id, groupId) });
@@ -71,7 +74,7 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
         title={group.name}
         subtitle={
           <Link href={`/admin/courses/${group.courseId}`} className="link">
-            ← {course?.title}
+            → {course?.title}
           </Link>
         }
       />

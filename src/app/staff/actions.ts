@@ -17,6 +17,7 @@ const reviewSchema = z.object({
     .refine((n) => Number.isFinite(n), 'الدرجة يجب أن تكون رقماً'),
   feedback: z.string().trim().max(5000, 'التعليق طويل جداً'),
   internalNote: z.string().trim().max(5000, 'الملاحظة طويلة جداً'),
+  seenSubmittedAt: z.string().max(40).optional(),
 });
 
 export async function saveReviewAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -26,6 +27,7 @@ export async function saveReviewAction(_prev: ActionState, formData: FormData): 
     grade: str(formData, 'grade'),
     feedback: str(formData, 'feedback'),
     internalNote: str(formData, 'internalNote'),
+    seenSubmittedAt: str(formData, 'seenSubmittedAt') || undefined,
   });
   if (!parsed.success) return { status: 'error', message: parsed.error.issues[0]?.message ?? 'بيانات غير صحيحة' };
   try {

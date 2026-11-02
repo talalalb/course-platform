@@ -48,6 +48,9 @@ describe('deadline rules', () => {
     expect(canStillSubmit({ dueAt: new Date('2026-11-01T00:00:00Z'), allowLate: true }, null, now)).toEqual({ ok: true, late: true });
     expect(canStillSubmit({ dueAt: new Date('2026-11-01T00:00:00Z'), allowLate: false }, null, now).ok).toBe(false);
     expect(canStillSubmit({ dueAt: new Date('2026-11-03T00:00:00Z'), allowLate: true }, { status: 'reviewed' }, now).ok).toBe(false);
+    expect(
+      canStillSubmit({ dueAt: new Date('2026-11-01T00:00:00Z'), allowLate: false }, { status: 'submitted', isLate: false, reopened: true }, now),
+    ).toEqual({ ok: true, late: false });
   });
 });
 
@@ -62,6 +65,7 @@ describe('dashboard numbers', () => {
     maxScore: 20,
     assignmentTitle: 'A',
     submittedAt: null,
+    reviewedBy: null,
   };
   const past = new Date('2026-10-01T00:00:00Z');
   const future = new Date('2026-12-01T00:00:00Z');

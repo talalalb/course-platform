@@ -1,10 +1,11 @@
-import { NextResponse } from 'next/server';
 import { signOut } from '@/lib/auth/current-user';
-import { isSameOrigin } from '@/lib/http';
 
-export async function POST(request: Request) {
-  if (isSameOrigin(request)) {
-    await signOut();
-  }
-  return NextResponse.redirect(new URL('/login', request.url), { status: 303 });
+/**
+ * Logs out and goes back to the login page.
+ * No origin check is needed: the session cookie is SameSite=Lax, so another site cannot send it with a POST.
+ * The redirect is relative so it works behind any reverse proxy or domain.
+ */
+export async function POST() {
+  await signOut();
+  return new Response(null, { status: 303, headers: { Location: '/login' } });
 }

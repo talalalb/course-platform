@@ -51,7 +51,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ submiss
         subtitle={
           <span className="flex flex-wrap items-center gap-2">
             <Link className="link" href={`/staff/assignments/${assignment.id}`}>
-              ← {assignment.title}
+              → {assignment.title}
             </Link>
             <span className="text-gray-400">|</span>
             <span>{course?.title}</span>
@@ -134,6 +134,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ submiss
           <Card title="التصحيح">
             <ActionForm action={saveReviewAction} className="space-y-4">
               <input type="hidden" name="submissionId" value={submission.id} />
+              <input type="hidden" name="seenSubmittedAt" value={submission.submittedAt.toISOString()} />
               <div>
                 <label className="label" htmlFor="grade">
                   الدرجة من {assignment.maxScore} <Badge tone="purple">للإدارة والمشرف فقط</Badge>

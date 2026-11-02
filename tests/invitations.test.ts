@@ -107,6 +107,25 @@ describe('invitations', () => {
     await expect(addStudentToGroup({ name: 'Sup', email: sup.email, groupId, createdBy: admin.id })).rejects.toThrow();
   });
 
+  it('inviting the same new person to another course keeps the first invitation and enrols both', async () => {
+    const [course2] = await db.insert(courses).values({ title: 'C2' }).returning();
+    const [g2] = await db.insert(groups).values({ courseId: course2.id, name: 'X' }).returning();
+    const first = await invite('two@test.local');
+    const second = await addStudentToGroup({ name: 'Two', email: 'two@test.local', groupId: g2.id, createdBy: admin.id });
+    expect(second.kind).toBe('invited');
+    expect(await findUsableInvitation(first)).not.toBeNull();
+    await acceptInvitation({ token: first, name: 'Two', password: 'long-password-1' });
+    const user = await db.query.users.findFirst({ where: eq(users.email, 'two@test.local') });
+    const memberships = await db.select().from(groupStudents).where(eq(groupStudents.studentId, user!.id));
+    expect(memberships.map((m) => m.groupId).sort()).toEqual([groupId, g2.id].sort());
+  });
+
+  it('a second invitation in the same course replaces the first', async () => {
+    const first = await invite('same@test.local');
+    await addStudentToGroup({ name: 'Same', email: 'same@test.local', groupId: otherGroupId, createdBy: admin.id });
+    expect(await findUsableInvitation(first)).toBeNull();
+  });
+
   it('supervisor invitations create supervisor accounts', async () => {
     const token = await inviteSupervisor({ name: 'Mentor', email: 'mentor@test.local', createdBy: admin.id });
     const result = await acceptInvitation({ token, name: 'Mentor', password: 'long-password-1' });

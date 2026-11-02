@@ -1,6 +1,6 @@
 'use server';
 
-import { and, count, eq, inArray } from 'drizzle-orm';
+import { and, count, eq, inArray, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
@@ -15,6 +15,7 @@ import {
   groupStudents,
   groupSupervisors,
   groups,
+  reviews,
   submissionFiles,
   submissions,
   users,
@@ -272,7 +273,11 @@ export async function setUserActiveAction(formData: FormData): Promise<void> {
   const active = str(formData, 'active') === 'true';
   if (userId === admin.id) throw new Error('لا يمكنك إيقاف حسابك');
   await db.update(users).set({ isActive: active }).where(eq(users.id, userId));
-  if (!active) await deleteAllSessionsForUser(userId);
+  if (!active) {
+    await deleteAllSessionsForUser(userId);
+    // A suspended supervisor no longer counts as a group's supervisor (the admin re-links after reactivation).
+    await db.delete(groupSupervisors).where(eq(groupSupervisors.supervisorId, userId));
+  }
   revalidatePath('/admin/users');
 }
 
@@ -330,7 +335,22 @@ export async function updateAssignmentAction(_prev: ActionState, formData: FormD
   const existing = await db.query.assignments.findFirst({ where: eq(assignments.id, id.data) });
   if (!existing) return fail('الواجب غير موجود');
   const { courseId: _ignored, ...changes } = parsed.data;
+  if (changes.maxScore !== existing.maxScore) {
+    const [{ value: graded }] = await db
+      .select({ value: count() })
+      .from(reviews)
+      .innerJoin(submissions, eq(submissions.id, reviews.submissionId))
+      .where(eq(submissions.assignmentId, id.data));
+    if (graded > 0) return fail('لا يمكن تغيير الدرجة الكاملة بعد بدء التصحيح');
+  }
   await db.update(assignments).set(changes).where(eq(assignments.id, id.data));
+  if (changes.dueAt.getTime() !== existing.dueAt.getTime()) {
+    // Late / on-time follows the new deadline.
+    await db
+      .update(submissions)
+      .set({ isLate: sql`${submissions.submittedAt} > ${changes.dueAt}` })
+      .where(eq(submissions.assignmentId, id.data));
+  }
   revalidatePath(`/admin/assignments/${id.data}`);
   revalidatePath(`/admin/courses/${existing.courseId}`);
   return { status: 'success', message: 'تم حفظ الواجب' };

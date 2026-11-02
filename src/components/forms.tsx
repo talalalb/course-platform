@@ -72,11 +72,34 @@ export function ActionForm({
 }) {
   const [state, formAction] = useActionState(action, idleState);
   const ref = useRef<HTMLFormElement>(null);
+  // React resets a form after every action. On error, put back what the user typed so nothing is lost.
+  const snapshot = useRef<FormData | null>(null);
   useEffect(() => {
-    if (resetOnSuccess && state.status === 'success') ref.current?.reset();
+    const form = ref.current;
+    if (!form) return;
+    if (state.status === 'success' && resetOnSuccess) form.reset();
+    if (state.status === 'error' && snapshot.current) {
+      const data = snapshot.current;
+      for (const el of Array.from(form.elements)) {
+        if (el instanceof HTMLInputElement) {
+          if (!el.name || ['hidden', 'file', 'password', 'submit', 'button'].includes(el.type)) continue;
+          if (el.type === 'checkbox' || el.type === 'radio') el.checked = data.getAll(el.name).includes(el.value || 'on');
+          else if (data.has(el.name)) el.value = String(data.get(el.name));
+        } else if ((el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) && el.name && data.has(el.name)) {
+          el.value = String(data.get(el.name));
+        }
+      }
+    }
   }, [state, resetOnSuccess]);
   return (
-    <form ref={ref} action={formAction} className={className}>
+    <form
+      ref={ref}
+      action={formAction}
+      className={className}
+      onSubmit={(e) => {
+        snapshot.current = new FormData(e.currentTarget);
+      }}
+    >
       {children}
       <FormMessage state={state} />
     </form>

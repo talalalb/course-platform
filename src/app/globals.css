@@ -23,6 +23,11 @@ body {
   unicode-bidi: isolate;
 }
 
+/* Let wide tables and long file names scroll or truncate inside grid columns instead of widening the page on phones. */
+.grid > * {
+  min-width: 0;
+}
+
 input,
 select,
 textarea {

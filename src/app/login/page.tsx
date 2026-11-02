@@ -29,7 +29,7 @@ export default async function LoginPage() {
           </div>
           <SubmitButton pendingText="جارٍ الدخول…">دخول</SubmitButton>
         </ActionForm>
-        <p className="mt-6 text-xs text-gray-400">الحسابات تُنشأ بدعوة من الإدارة فقط. نسيت كلمة المرور؟ اطلب من الإدارة رابط تعيين كلمة مرور جديدة.</p>
+        <p className="mt-6 text-sm text-gray-600">الحسابات تُنشأ بدعوة من الإدارة فقط. نسيت كلمة المرور؟ اطلب من الإدارة رابط تعيين كلمة مرور جديدة.</p>
       </div>
     </div>
   );

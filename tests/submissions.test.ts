@@ -57,6 +57,30 @@ describe('submitting', () => {
     expect(res.submissionId).toBe(w.carolA.id);
   });
 
+  it('a reopened submission can be replaced after the deadline even when late work is off, keeping its late flag', async () => {
+    await db.update(assignments).set({ allowLate: false }).where(eq(assignments.id, w.hwA.id));
+    await reopenSubmission(as(w.s3), w.carolA.id);
+    const res = await submitAssignment({ student: as(w.carol), assignmentId: w.hwA.id, files: [file()], note: 'fixed' });
+    expect(res.submissionId).toBe(w.carolA.id);
+    expect(res.late).toBe(false);
+    // Not reopened: still closed.
+    await expect(submitAssignment({ student: as(w.bob), assignmentId: w.hwA.id, files: [file()], note: '' })).rejects.toThrow(/انتهى/);
+  });
+
+  it('refuses a grade when the student uploaded a new version meanwhile', async () => {
+    await expect(
+      saveReview(as(w.s1), {
+        submissionId: w.aliceA.id,
+        grade: 50,
+        feedback: '',
+        internalNote: '',
+        seenSubmittedAt: new Date(0).toISOString(),
+      }),
+    ).rejects.toThrow(/نسخة جديدة/);
+    const row = await db.query.submissions.findFirst({ where: eq(submissions.id, w.aliceA.id) });
+    await saveReview(as(w.s1), { submissionId: w.aliceA.id, grade: 50, feedback: '', internalNote: '', seenSubmittedAt: row!.submittedAt.toISOString() });
+  });
+
   it('students cannot submit to unpublished assignments or as staff', async () => {
     await expect(submitAssignment({ student: as(w.alice), assignmentId: w.draftA.id, files: [file()], note: '' })).rejects.toThrow();
     await expect(submitAssignment({ student: as(w.s1), assignmentId: w.openA.id, files: [file()], note: '' })).rejects.toThrow();

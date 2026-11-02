@@ -1,5 +1,25 @@
 [
   {
+    "name": "anonymous /admin leaks no student data",
+    "ok": true,
+    "detail": "status 307, 5401 bytes"
+  },
+  {
+    "name": "anonymous /admin/courses leaks no student data",
+    "ok": true,
+    "detail": "status 307, 5893 bytes"
+  },
+  {
+    "name": "anonymous /admin/groups/46f729e1-a3e5-4aaf-a540-89a6757f79ad leaks no student data",
+    "ok": true,
+    "detail": "status 307, 6489 bytes"
+  },
+  {
+    "name": "a student requesting /admin gets no dashboard data",
+    "ok": true,
+    "detail": "5405 bytes"
+  },
+  {
     "name": "admin lands on admin dashboard",
     "ok": true,
     "detail": "http://localhost:3000/admin"
@@ -10,9 +30,24 @@
     "detail": ""
   },
   {
+    "name": "course page shows real submission counts",
+    "ok": true,
+    "detail": "الواجب 1: المتغيرات والشروط منتهي23 أكتوبر 2026، 1:28 م5عرض الحلول"
+  },
+  {
     "name": "admin gets an invitation link",
     "ok": true,
-    "detail": "http://localhost:3000/invite/Y6M7Z3STNgH…"
+    "detail": "http://localhost:3000/invite/hrAx_FoKiI9…"
+  },
+  {
+    "name": "users page lists each supervisor's groups",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "admin gets a password reset link",
+    "ok": true,
+    "detail": ""
   },
   {
     "name": "admin CSV export includes students of all groups",
@@ -35,12 +70,32 @@
     "detail": ""
   },
   {
+    "name": "logout really ends the session",
+    "ok": true,
+    "detail": "http://localhost:3000/login"
+  },
+  {
+    "name": "password reset link signs the student in with the new password",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "password reset link works only once",
+    "ok": true,
+    "detail": ""
+  },
+  {
     "name": "supervisor lands on supervisor dashboard",
     "ok": true,
     "detail": "http://localhost:3000/supervisor"
   },
   {
     "name": "supervisor (group A only) does not see group B students",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "a rejected grade keeps the typed feedback",
     "ok": true,
     "detail": ""
   },

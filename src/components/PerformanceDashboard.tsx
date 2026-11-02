@@ -1,7 +1,8 @@
 import Link from 'next/link';
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { AutoSubmitSelect } from '@/components/forms';
 import { Badge, Card, EmptyState, StatCard, TableWrap } from '@/components/ui';
+import { getCurrentUser } from '@/lib/auth/current-user';
 import { db } from '@/lib/db';
 import { courses, groupSupervisors, groups, users } from '@/lib/db/schema';
 import { formatDateTime, formatPercent } from '@/lib/format';
@@ -29,7 +30,7 @@ async function supervisorsByGroup(groupIds: string[]) {
     .select({ groupId: groupSupervisors.groupId, id: users.id, name: users.name })
     .from(groupSupervisors)
     .innerJoin(users, eq(users.id, groupSupervisors.supervisorId))
-    .where(inArray(groupSupervisors.groupId, groupIds));
+    .where(and(inArray(groupSupervisors.groupId, groupIds), eq(users.isActive, true)));
   const map = new Map<string, { id: string; name: string }[]>();
   for (const r of rows) map.set(r.groupId, [...(map.get(r.groupId) ?? []), { id: r.id, name: r.name }]);
   return map;
@@ -44,6 +45,11 @@ export async function PerformanceDashboard({
   courseId?: string;
   basePath: string;
 }) {
+  // Second line of defence: the scope must match the person viewing the page.
+  const viewer = await getCurrentUser();
+  if (!viewer || (scope.kind === 'all' ? viewer.role !== 'admin' : viewer.role !== 'supervisor' || viewer.id !== scope.supervisorId)) {
+    return null;
+  }
   const isAdmin = scope.kind === 'all';
   const now = new Date();
 
@@ -72,14 +78,15 @@ export async function PerformanceDashboard({
   let userCounts: { supervisors: number; courses: number; groups: number } | null = null;
   if (isAdmin) {
     const [supCount, courseCount, groupCount] = await Promise.all([
-      db.$count(users, eq(users.role, 'supervisor')),
+      db.$count(users, and(eq(users.role, 'supervisor'), eq(users.isActive, true))),
       db.$count(courses),
       db.$count(groups),
     ]);
     userCounts = { supervisors: supCount, courses: courseCount, groups: groupCount };
   }
 
-  // Supervisor workload (admin view).
+  // Supervisor workload (admin view). "Pending" is shared by a group's supervisors;
+  // "reviewed" counts the reviews each supervisor actually saved.
   const supervisorRows = new Map<string, { name: string; groups: string[]; students: number; pending: number; reviewed: number }>();
   if (isAdmin) {
     for (const g of groupSummaries) {
@@ -88,8 +95,13 @@ export async function PerformanceDashboard({
         row.groups.push(g.groupName);
         row.students += g.students;
         row.pending += g.pending;
-        row.reviewed += g.reviewed;
         supervisorRows.set(s.id, row);
+      }
+    }
+    for (const p of pairs) {
+      if (p.status === 'reviewed' && p.reviewedBy) {
+        const row = supervisorRows.get(p.reviewedBy);
+        if (row) row.reviewed += 1;
       }
     }
   }
@@ -306,7 +318,7 @@ export async function PerformanceDashboard({
                       {a.dueAt > now ? <div><Badge tone="blue">مفتوح</Badge></div> : null}
                     </td>
                     <td>
-                      {a.submitted} / {a.students}
+                      {a.submitted} من {a.students}
                     </td>
                     <td>{a.late}</td>
                     <td>{a.reviewed}</td>
@@ -334,7 +346,7 @@ export async function PerformanceDashboard({
                 <tr>
                   <th>الطالب</th>
                   <th>المجموعة</th>
-                  <th>سلّم / المستحق</th>
+                  <th>سلّم من المستحق</th>
                   <th>متأخر</th>
                   <th>لم يُسلِّم</th>
                   <th>المتوسط</th>
@@ -353,7 +365,7 @@ export async function PerformanceDashboard({
                       <div className="text-gray-400">{s.courseTitle}</div>
                     </td>
                     <td>
-                      {s.submittedDue} / {s.due}
+                      {s.submittedDue} من {s.due}
                     </td>
                     <td>{s.late}</td>
                     <td>{s.missing > 0 ? <Badge tone="red">{s.missing}</Badge> : 0}</td>

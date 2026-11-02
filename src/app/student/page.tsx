@@ -49,7 +49,7 @@ export default async function StudentHome() {
     <>
       <PageHeader
         title={`مرحباً ${student.name}`}
-        subtitle={todo.length > 0 ? `لديك ${todo.length} واجب بانتظار التسليم` : 'لا توجد واجبات بانتظار التسليم'}
+        subtitle={todo.length > 0 ? `واجبات بانتظار التسليم: ${todo.length}` : 'لا توجد واجبات بانتظار التسليم'}
       />
       {memberships.length === 0 ? (
         <EmptyState>لم تتم إضافتك لأي مجموعة بعد. تواصل مع الإدارة.</EmptyState>

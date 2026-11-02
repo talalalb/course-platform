@@ -19,5 +19,5 @@ COPY --from=build --chown=node:node /app /app
 RUN mkdir -p /app/storage && chown node:node /app/storage
 USER node
 EXPOSE 3000
-# Apply pending database migrations, then start the site.
-CMD ["sh", "-c", "npm run db:migrate && npm start"]
+# Apply pending database migrations, then start the site. `exec` hands PID 1 to Next so it stops gracefully.
+CMD ["sh", "-c", "npm run db:migrate && exec ./node_modules/.bin/next start"]

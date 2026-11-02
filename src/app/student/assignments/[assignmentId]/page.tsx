@@ -27,7 +27,9 @@ export default async function StudentAssignmentPage({ params }: { params: Promis
     getOwnSubmission(student.id, assignment.id),
   ]);
   const now = new Date();
-  const check = canStillSubmit(assignment, mine);
+  // A submission that was reviewed and then reopened by staff can be uploaded again regardless of the deadline.
+  const reopened = mine?.status === 'submitted' && mine.reviewedAt !== null;
+  const check = canStillSubmit(assignment, mine ? { status: mine.status, isLate: mine.isLate, reopened } : null);
 
   return (
     <>
@@ -35,7 +37,7 @@ export default async function StudentAssignmentPage({ params }: { params: Promis
         title={assignment.title}
         subtitle={
           <Link className="link" href="/student">
-            ← {course?.title}
+            → {course?.title}
           </Link>
         }
       />
@@ -72,7 +74,11 @@ export default async function StudentAssignmentPage({ params }: { params: Promis
 
           {check.ok ? (
             <Card title={mine ? 'تعديل الحل' : 'تسليم الحل'}>
-              {check.late ? (
+              {reopened ? (
+                <div className="mb-4">
+                  <Notice tone="success">أعاد المشرف فتح التسليم لك؛ يمكنك رفع حل جديد.</Notice>
+                </div>
+              ) : check.late ? (
                 <div className="mb-4">
                   <Notice tone="warn">انتهى الموعد، وسيظهر تسليمك على أنه «متأخر».</Notice>
                 </div>
@@ -89,6 +95,7 @@ export default async function StudentAssignmentPage({ params }: { params: Promis
                 endpoint={`/api/assignments/${assignment.id}/submission`}
                 submitLabel={mine ? 'استبدال الحل' : 'تسليم الحل'}
                 withNote
+                initialNote={mine?.note ?? ''}
                 replaceWarning={mine ? 'سيتم استبدال ملفاتك السابقة بالملفات الجديدة. متابعة؟' : undefined}
               />
             </Card>

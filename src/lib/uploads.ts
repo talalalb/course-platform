@@ -11,7 +11,8 @@ export const MAX_FILES_PER_SUBMISSION = 5;
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 export const MAX_PDF_BYTES = 20 * 1024 * 1024;
 export const MAX_TOTAL_BYTES = 50 * 1024 * 1024;
-const MAX_IMAGE_PIXELS = 40_000_000;
+// 60 MP covers the 48-50 MP modes of current phones; the stored copy is shrunk to 4000 px anyway.
+const MAX_IMAGE_PIXELS = 60_000_000;
 const MAX_IMAGE_EDGE = 4000;
 
 export type DetectedType = 'png' | 'jpeg' | 'webp' | 'pdf';
@@ -49,11 +50,15 @@ export function cleanFileName(name: string, extension: string): string {
 }
 
 async function processImage(buf: Buffer, type: Exclude<DetectedType, 'pdf'>): Promise<{ data: Buffer }> {
-  const meta = await sharp(buf, { limitInputPixels: MAX_IMAGE_PIXELS })
+  // Reading the header only (no pixel decoding), so the size check can give a clear message.
+  const meta = await sharp(buf, { limitInputPixels: false })
     .metadata()
     .catch(() => null);
-  if (!meta) throw new UploadError('الصورة تالفة أو غير مدعومة');
+  if (!meta || !meta.width || !meta.height) throw new UploadError('الصورة تالفة أو غير مدعومة');
   if (meta.format !== type) throw new UploadError('نوع الصورة غير مدعوم');
+  if (meta.width * meta.height > MAX_IMAGE_PIXELS) {
+    throw new UploadError('أبعاد الصورة كبيرة جداً؛ صغّرها أو التقطها بدقة أقل');
+  }
   try {
     const pipeline = sharp(buf, { limitInputPixels: MAX_IMAGE_PIXELS })
       .autoOrient()

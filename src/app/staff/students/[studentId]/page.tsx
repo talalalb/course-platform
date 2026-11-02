@@ -50,7 +50,7 @@ export default async function StudentPerformancePage({
         }
       />
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-5">
-        <StatCard label="سلّم / المستحق" value={`${stats.submittedDue} / ${stats.due}`} />
+        <StatCard label="سلّم من المستحق" value={`${stats.submittedDue} من ${stats.due}`} />
         <StatCard label="نسبة التسليم" value={formatPercent(stats.submissionRate)} />
         <StatCard label="متأخر" value={stats.late} />
         <StatCard label="لم يُسلِّم" value={stats.missing} tone={stats.missing > 0 ? 'warn' : 'default'} />
@@ -88,7 +88,7 @@ export default async function StudentPerformancePage({
                             <td>
                               <SubmissionStatusBadge status={r.status} isLate={r.isLate} dueAt={r.dueAt as Date} now={now} />
                             </td>
-                            <td className="ltr">{r.grade !== null ? `${formatNumber(r.grade)} / ${r.maxScore}` : '—'}</td>
+                            <td>{r.grade !== null ? `${formatNumber(r.grade)} من ${r.maxScore}` : '—'}</td>
                             <td>
                               {r.submissionId ? (
                                 <Link className="link text-xs" href={`/staff/submissions/${r.submissionId}`}>

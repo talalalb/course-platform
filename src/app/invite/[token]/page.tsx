@@ -39,8 +39,10 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
             <ActionForm action={acceptInviteAction} className="mt-6 space-y-4">
               <input type="hidden" name="token" value={token} />
               <div>
-                <label className="label">البريد الإلكتروني</label>
-                <input className="field ltr bg-gray-50 text-left" value={invitation.email} readOnly disabled />
+                <label className="label" htmlFor="invite-email">
+                  البريد الإلكتروني
+                </label>
+                <input id="invite-email" className="field ltr bg-gray-50 text-left" value={invitation.email} readOnly disabled />
               </div>
               <div>
                 <label className="label" htmlFor="name">

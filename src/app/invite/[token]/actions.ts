@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { homePathFor, signIn } from '@/lib/auth/current-user';
 import { acceptInvitation, InviteError } from '@/lib/invitations';
+import { clientIp } from '@/lib/http';
 import { isRateLimited } from '@/lib/rate-limit';
 import { firstError, nameField, passwordField, str } from '@/lib/validation';
 import type { ActionState } from '@/components/forms';
@@ -17,9 +18,8 @@ const schema = z
   .refine((v) => v.password === v.confirm, { message: 'كلمتا المرور غير متطابقتين', path: ['confirm'] });
 
 export async function acceptInviteAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const h = await headers();
-  const ip = (h.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'local';
-  if (isRateLimited(`invite:${ip}`, 20, 15 * 60 * 1000)) {
+  const ip = clientIp(await headers());
+  if (isRateLimited(`invite:${ip}`, 100, 15 * 60 * 1000)) {
     return { status: 'error', message: 'محاولات كثيرة، انتظر قليلاً ثم حاول مرة أخرى' };
   }
   const parsed = schema.safeParse({

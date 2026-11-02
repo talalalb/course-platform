@@ -31,16 +31,19 @@ export type PairRow = {
   isLate: boolean | null;
   submittedAt: Date | null;
   grade: number | null;
+  reviewedBy: string | null;
 };
 
 export async function loadPairs(scope: Scope, filters: { courseId?: string; studentId?: string; assignmentId?: string } = {}): Promise<PairRow[]> {
-  const conditions = [sql`u.is_active`];
+  // Deactivated students are left out of dashboards, but their own history stays reachable.
+  const conditions = filters.studentId ? [] : [sql`u.is_active`];
   if (scope.kind === 'supervisor') {
     conditions.push(sql`gs.group_id IN (SELECT group_id FROM group_supervisors WHERE supervisor_id = ${scope.supervisorId})`);
   }
   if (filters.courseId) conditions.push(sql`gs.course_id = ${filters.courseId}`);
   if (filters.studentId) conditions.push(sql`gs.student_id = ${filters.studentId}`);
-  const assignmentFilter = filters.assignmentId ? sql` AND a.id = ${filters.assignmentId}` : sql``;
+  // A specific assignment is shown even when it is unpublished (staff reviewing drafts or hidden work).
+  const assignmentFilter = filters.assignmentId ? sql` AND a.id = ${filters.assignmentId}` : sql` AND a.is_published`;
 
   const result = await db.execute<{
     group_id: string;
@@ -59,17 +62,19 @@ export async function loadPairs(scope: Scope, filters: { courseId?: string; stud
     is_late: boolean | null;
     submitted_at: Date | string | null;
     grade: number | null;
+    reviewed_by: string | null;
   }>(sql`
     SELECT gs.group_id, g.name AS group_name, gs.course_id, c.title AS course_title,
            u.id AS student_id, u.name AS student_name, u.email AS student_email,
            a.id AS assignment_id, a.title AS assignment_title, a.due_at, a.max_score,
            s.id AS submission_id, s.status, s.is_late, s.submitted_at,
-           CASE WHEN s.status = 'reviewed' THEN r.grade ELSE NULL END AS grade
+           CASE WHEN s.status = 'reviewed' THEN r.grade ELSE NULL END AS grade,
+           CASE WHEN s.status = 'reviewed' THEN r.reviewed_by ELSE NULL END AS reviewed_by
     FROM group_students gs
     JOIN groups g ON g.id = gs.group_id
     JOIN courses c ON c.id = gs.course_id
     JOIN users u ON u.id = gs.student_id
-    LEFT JOIN assignments a ON a.course_id = gs.course_id AND a.is_published${assignmentFilter}
+    LEFT JOIN assignments a ON a.course_id = gs.course_id${assignmentFilter}
     LEFT JOIN submissions s ON s.assignment_id = a.id AND s.student_id = gs.student_id
     LEFT JOIN reviews r ON r.submission_id = s.id
     WHERE ${sql.join(conditions, sql` AND `)}
@@ -94,6 +99,7 @@ export async function loadPairs(scope: Scope, filters: { courseId?: string; stud
     isLate: r.is_late,
     submittedAt: toDate(r.submitted_at),
     grade: r.grade === null ? null : Number(r.grade),
+    reviewedBy: r.reviewed_by,
   }));
 }
 

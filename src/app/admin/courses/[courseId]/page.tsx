@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { requireRole } from '@/lib/auth/current-user';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { asc, desc, eq, sql } from 'drizzle-orm';
@@ -13,6 +14,8 @@ import { createGroupAction, deleteCourseAction, updateCourseAction } from '../..
 export const metadata: Metadata = { title: 'تفاصيل الدورة' };
 
 export default async function CoursePage({ params }: { params: Promise<{ courseId: string }> }) {
+  // Each page checks access itself: a layout's redirect does not stop the page from rendering.
+  await requireRole('admin');
   const { courseId } = await params;
   if (!isUuid(courseId)) notFound();
   const course = await db.query.courses.findFirst({ where: eq(courses.id, courseId) });
@@ -31,7 +34,7 @@ export default async function CoursePage({ params }: { params: Promise<{ courseI
       title: assignments.title,
       dueAt: assignments.dueAt,
       isPublished: assignments.isPublished,
-      submitted: sql<number>`(SELECT count(*)::int FROM submissions s WHERE s.assignment_id = ${assignments.id})`,
+      submitted: sql<number>`(SELECT count(*)::int FROM submissions s WHERE s.assignment_id = assignments.id)`,
     })
     .from(assignments)
     .where(eq(assignments.courseId, courseId))
@@ -44,7 +47,7 @@ export default async function CoursePage({ params }: { params: Promise<{ courseI
         title={course.title}
         subtitle={
           <Link href="/admin/courses" className="link">
-            ← كل الدورات
+            → كل الدورات
           </Link>
         }
         actions={<LinkButton href={`/admin?course=${course.id}`}>لوحة متابعة الدورة</LinkButton>}

@@ -68,6 +68,23 @@ async function main() {
     `SELECT s.id FROM submissions s JOIN users u ON u.id = s.student_id WHERE u.email = 'lama@demo.test' LIMIT 1`,
   );
 
+  // ---------------- No data leaks through redirects ----------------
+  {
+    const anon = await browser.newContext();
+    for (const url of [`${BASE}/admin`, `${BASE}/admin/courses`, `${BASE}/admin/groups/${progGroupA.id}`]) {
+      const res = await anon.request.get(url, { maxRedirects: 0 });
+      const body = await res.text();
+      check(`anonymous ${new URL(url).pathname} leaks no student data`, res.status() === 307 && !body.includes('حصة المطيري') && !body.includes('@demo.test'), `status ${res.status()}, ${body.length} bytes`);
+    }
+    await anon.close();
+    const { context, page } = await login(browser, 'lama@demo.test');
+    const res = await page.request.get(`${BASE}/admin`, { maxRedirects: 0 });
+    const body = await res.text();
+    check('a student requesting /admin gets no dashboard data', !body.includes('حصة المطيري') && !body.includes('متوسط الدرجات'), `${body.length} bytes`);
+    await context.close();
+  }
+
+  let resetLink = '';
   // ---------------- Admin ----------------
   {
     const { context, page } = await login(browser, 'admin@demo.test');
@@ -80,6 +97,8 @@ async function main() {
     await page.click('text=دورة أساسيات البرمجة');
     await page.waitForURL(/\/admin\/courses\//);
     await shot(page, '03-admin-course');
+    const hw1Row = await page.locator('tr', { hasText: 'الواجب 1' }).textContent();
+    check('course page shows real submission counts', /\b5\b/.test(hw1Row), hw1Row.replace(/\s+/g, ' ').slice(0, 80));
     await page.goto(`${BASE}/admin/groups/${progGroupA.id}`);
     await shot(page, '04-admin-group');
 
@@ -95,6 +114,16 @@ async function main() {
 
     await page.goto(`${BASE}/admin/users`);
     await shot(page, '06-admin-users');
+    const khalidRow = await page.locator('tr', { hasText: 'khalid@demo.test' }).textContent();
+    check('users page lists each supervisor\'s groups', khalidRow.includes('المجموعة أ') && khalidRow.includes('المجموعة ب'));
+
+    // Password reset link for a student
+    const saraRow = page.locator('tr', { hasText: 'sara@demo.test' });
+    await saraRow.locator('text=رابط كلمة مرور جديدة').click();
+    const resetCode = saraRow.locator('code');
+    await resetCode.waitFor();
+    resetLink = (await resetCode.textContent()).trim();
+    check('admin gets a password reset link', resetLink.includes('/reset/'));
     const csv = await page.request.get(`${BASE}/staff/export`);
     const csvText = await csv.text();
     check('admin CSV export includes students of all groups', csvText.includes('مها الرشيد') && csvText.includes('عبدالله الحربي'));
@@ -114,7 +143,27 @@ async function main() {
     check('accepted invitation signs the student in', gp.url().endsWith('/student'));
     await gp.goto(`${BASE}${invitePath}`);
     check('invitation link cannot be used twice', (await gp.textContent('body')).includes('غير صالح'));
+
+    // Logout from the real button, then the session must be gone.
+    await gp.goto(`${BASE}/student`);
+    await Promise.all([gp.waitForURL(/\/login/), gp.click('text=خروج')]);
+    await gp.goto(`${BASE}/student`);
+    check('logout really ends the session', gp.url().includes('/login'), gp.url());
     await guest.close();
+  }
+
+  // ---------------- Password reset ----------------
+  {
+    const ctx = await browser.newContext();
+    const rp = await ctx.newPage();
+    await rp.goto(`${BASE}${new URL(resetLink).pathname}`);
+    await rp.fill('#password', 'Sara#NewPass2026');
+    await rp.fill('#confirm', 'Sara#NewPass2026');
+    await Promise.all([rp.waitForURL(/\/student/), rp.click('button[type=submit]')]);
+    check('password reset link signs the student in with the new password', rp.url().endsWith('/student'));
+    await rp.goto(`${BASE}${new URL(resetLink).pathname}`);
+    check('password reset link works only once', (await rp.textContent('body')).includes('غير صالح'));
+    await ctx.close();
   }
 
   // ---------------- Supervisor ----------------
@@ -127,6 +176,11 @@ async function main() {
 
     await page.goto(`${BASE}/staff/submissions/${pendingSara.id}`);
     await shot(page, '09-supervisor-review');
+    await page.fill('#grade', '150');
+    await page.fill('#feedback', 'نص طويل كتبه المشرف ولا يجب أن يضيع');
+    await page.click('text=حفظ التصحيح');
+    await page.locator('text=الدرجة يجب أن تكون بين').waitFor();
+    check('a rejected grade keeps the typed feedback', (await page.inputValue('#feedback')).includes('لا يجب أن يضيع'));
     await page.fill('#grade', '86');
     await page.fill('#feedback', 'حل ممتاز، أحسنتِ في تنظيم الحلقات.');
     await page.fill('#internalNote', 'ملاحظة سرية للمشرفين: تحسن واضح.');

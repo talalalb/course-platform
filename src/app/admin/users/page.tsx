@@ -38,10 +38,12 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
       role: users.role,
       isActive: users.isActive,
       createdAt: users.createdAt,
+      // Outer columns are written literally: drizzle renders interpolated columns of a single-table select unqualified.
       groupNames: sql<string | null>`(
-        SELECT string_agg(g.name, '، ' ORDER BY g.name) FROM groups g
-        WHERE g.id IN (SELECT group_id FROM group_students WHERE student_id = ${users.id}
-                       UNION SELECT group_id FROM group_supervisors WHERE supervisor_id = ${users.id})
+        SELECT string_agg(c.title || ' — ' || g.name, '، ' ORDER BY c.title, g.name)
+        FROM groups g JOIN courses c ON c.id = g.course_id
+        WHERE g.id IN (SELECT gs.group_id FROM group_students gs WHERE gs.student_id = users.id
+                       UNION SELECT gv.group_id FROM group_supervisors gv WHERE gv.supervisor_id = users.id)
       )`,
     })
     .from(users)
@@ -123,7 +125,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                                 <input type="hidden" name="active" value={u.isActive ? 'false' : 'true'} />
                                 <ConfirmButton
                                   variant={u.isActive ? 'danger' : 'secondary'}
-                                  message={u.isActive ? `إيقاف حساب ${u.name}؟ لن يستطيع الدخول وتبقى بياناته محفوظة.` : `إعادة تفعيل حساب ${u.name}؟`}
+                                  message={u.isActive ? `إيقاف حساب ${u.name}؟ لن يستطيع الدخول وتبقى بياناته محفوظة.${u.role === 'supervisor' ? ' وسيُزال من الإشراف على مجموعاته.' : ''}` : `إعادة تفعيل حساب ${u.name}؟`}
                                 >
                                   {u.isActive ? 'إيقاف' : 'تفعيل'}
                                 </ConfirmButton>

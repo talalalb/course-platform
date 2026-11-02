@@ -48,12 +48,20 @@ export async function getOwnSubmission(studentId: string, assignmentId: string) 
   return { ...row, feedback: row.feedback ?? null, files };
 }
 
+export type ExistingSubmission = {
+  status: 'submitted' | 'reviewed';
+  isLate?: boolean;
+  /** Staff reopened a reviewed submission: the student may upload again whatever the deadline. */
+  reopened?: boolean;
+};
+
 export function canStillSubmit(
   assignment: { dueAt: Date; allowLate: boolean },
-  existing: { status: 'submitted' | 'reviewed' } | null,
+  existing: ExistingSubmission | null,
   now = new Date(),
 ): { ok: true; late: boolean } | { ok: false; reason: string } {
   if (existing?.status === 'reviewed') return { ok: false, reason: 'تم تصحيح الحل، لا يمكن تعديله' };
+  if (existing?.reopened) return { ok: true, late: existing.isLate ?? false };
   const late = now.getTime() > assignment.dueAt.getTime();
   if (late && !assignment.allowLate) return { ok: false, reason: 'انتهى موعد التسليم' };
   return { ok: true, late };
@@ -94,7 +102,12 @@ export async function submitAssignment(input: {
         .from(submissions)
         .where(and(eq(submissions.assignmentId, assignment.id), eq(submissions.studentId, input.student.id)))
         .for('update');
-      const check = canStillSubmit(assignment, existing ?? null);
+      let reopened = false;
+      if (existing && existing.status === 'submitted') {
+        const [review] = await tx.select({ id: reviews.submissionId }).from(reviews).where(eq(reviews.submissionId, existing.id));
+        reopened = Boolean(review);
+      }
+      const check = canStillSubmit(assignment, existing ? { ...existing, reopened } : null);
       if (!check.ok) throw new SubmissionError(check.reason, 409);
 
       let submissionId: string;
@@ -146,12 +159,17 @@ export type ReviewInput = {
   grade: number;
   feedback: string;
   internalNote: string;
+  /** submittedAt of the version the reviewer was looking at; protects against grading files that changed meanwhile. */
+  seenSubmittedAt?: string;
 };
 
 export async function saveReview(staff: Pick<SessionUser, 'id' | 'role'>, input: ReviewInput): Promise<void> {
   if (staff.role !== 'admin' && staff.role !== 'supervisor') throw new SubmissionError('غير مصرح', 403);
   const row = await getViewableSubmission(staff, input.submissionId);
   if (!row) throw new SubmissionError('الحل غير موجود', 404);
+  if (input.seenSubmittedAt && row.submission.submittedAt.toISOString() !== input.seenSubmittedAt) {
+    throw new SubmissionError('رفع الطالب نسخة جديدة من الحل أثناء التصحيح؛ حدّث الصفحة وراجعها', 409);
+  }
   if (!Number.isFinite(input.grade) || input.grade < 0 || input.grade > row.assignment.maxScore) {
     throw new SubmissionError(`الدرجة يجب أن تكون بين 0 و ${row.assignment.maxScore}`);
   }

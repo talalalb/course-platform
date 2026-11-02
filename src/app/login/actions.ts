@@ -8,6 +8,7 @@ import { users } from '@/lib/db/schema';
 import { homePathFor, signIn } from '@/lib/auth/current-user';
 import { verifyPassword } from '@/lib/auth/password';
 import { isRateLimited, resetRateLimit } from '@/lib/rate-limit';
+import { clientIp } from '@/lib/http';
 import { str } from '@/lib/validation';
 import type { ActionState } from '@/components/forms';
 
@@ -18,9 +19,9 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
   const password = str(formData, 'password').slice(0, 200);
   if (!email || !password) return { status: 'error', message: 'أدخل البريد الإلكتروني وكلمة المرور' };
 
-  const h = await headers();
-  const ip = (h.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'local';
-  if (isRateLimited(`login:ip:${ip}`, 30, 15 * 60 * 1000) || isRateLimited(`login:email:${email}`, 8, 15 * 60 * 1000)) {
+  const ip = clientIp(await headers());
+  // Generous per-IP limit (a whole class may share one network); the per-e-mail limit stops password guessing.
+  if (isRateLimited(`login:ip:${ip}`, 300, 15 * 60 * 1000) || isRateLimited(`login:email:${email}`, 8, 15 * 60 * 1000)) {
     return { status: 'error', message: 'محاولات كثيرة، انتظر قليلاً ثم حاول مرة أخرى' };
   }
 

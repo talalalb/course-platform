@@ -5,6 +5,18 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 const ACCEPT = 'image/png,image/jpeg,image/webp,application/pdf,.png,.jpg,.jpeg,.webp,.pdf';
 const MAX_FILES = 5;
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_PDF_BYTES = 20 * 1024 * 1024;
+
+function problemWith(file: File): string | null {
+  const name = file.name.toLowerCase();
+  const isPdf = file.type === 'application/pdf' || name.endsWith('.pdf');
+  const isImage = /^image\/(png|jpeg|webp)$/.test(file.type) || /\.(png|jpe?g|webp)$/.test(name);
+  if (!isPdf && !isImage) return `«${file.name}»: يُقبل PDF أو صور PNG / JPG / WebP فقط`;
+  if (isPdf && file.size > MAX_PDF_BYTES) return `«${file.name}» أكبر من 20 ميجابايت`;
+  if (!isPdf && file.size > MAX_IMAGE_BYTES) return `«${file.name}» أكبر من 10 ميجابايت`;
+  return null;
+}
 
 function sizeLabel(bytes: number) {
   return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -19,17 +31,19 @@ export function FileUploader({
   submitLabel,
   withNote = false,
   noteLabel = 'ملاحظة للمشرف (اختياري)',
+  initialNote = '',
   replaceWarning,
 }: {
   endpoint: string;
   submitLabel: string;
   withNote?: boolean;
   noteLabel?: string;
+  initialNote?: string;
   replaceWarning?: string;
 }) {
   const router = useRouter();
   const [files, setFiles] = useState<File[]>([]);
-  const [note, setNote] = useState('');
+  const [note, setNote] = useState(initialNote);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
@@ -37,11 +51,13 @@ export function FileUploader({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const addFiles = useCallback((incoming: File[]) => {
-    setError(null);
     setDone(null);
+    const problems = incoming.map(problemWith).filter((p): p is string => p !== null);
+    const accepted = incoming.filter((f) => problemWith(f) === null);
+    setError(problems.length > 0 ? problems.join(' — ') : null);
     setFiles((prev) => {
-      const next = [...prev, ...incoming].slice(0, MAX_FILES);
-      if (prev.length + incoming.length > MAX_FILES) setError(`الحد الأقصى ${MAX_FILES} ملفات`);
+      const next = [...prev, ...accepted].slice(0, MAX_FILES);
+      if (prev.length + accepted.length > MAX_FILES) setError(`الحد الأقصى ${MAX_FILES} ملفات`);
       return next;
     });
   }, []);
@@ -76,7 +92,6 @@ export function FileUploader({
         return;
       }
       setFiles([]);
-      setNote('');
       setDone(data.message ?? 'تم الرفع بنجاح');
       router.refresh();
     } catch {
@@ -108,7 +123,9 @@ export function FileUploader({
         className={`cursor-pointer rounded-xl border-2 border-dashed p-6 text-center transition ${dragging ? 'border-brand-600 bg-brand-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'}`}
       >
         <div className="text-sm font-semibold text-gray-800">اسحب الملفات هنا أو اضغط للاختيار</div>
-        <div className="mt-1 text-xs text-gray-500">صور (PNG / JPG / WebP) أو PDF — حتى {MAX_FILES} ملفات. يمكنك أيضاً لصق لقطة شاشة مباشرة (Ctrl+V)</div>
+        <div className="mt-1 text-xs text-gray-600">
+          صور PNG / JPG / WebP حتى 10 ميجابايت، أو PDF حتى 20 ميجابايت — حتى {MAX_FILES} ملفات. يمكنك أيضاً لصق لقطة شاشة مباشرة (Ctrl+V)
+        </div>
         <input
           ref={inputRef}
           type="file"
