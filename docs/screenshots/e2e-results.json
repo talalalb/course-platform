@@ -1,0 +1,122 @@
+[
+  {
+    "name": "admin lands on admin dashboard",
+    "ok": true,
+    "detail": "http://localhost:3000/admin"
+  },
+  {
+    "name": "admin dashboard shows group without supervisor",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "admin gets an invitation link",
+    "ok": true,
+    "detail": "http://localhost:3000/invite/Y6M7Z3STNgH…"
+  },
+  {
+    "name": "admin CSV export includes students of all groups",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "viewing an invitation does not consume it",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "accepted invitation signs the student in",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "invitation link cannot be used twice",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "supervisor lands on supervisor dashboard",
+    "ok": true,
+    "detail": "http://localhost:3000/supervisor"
+  },
+  {
+    "name": "supervisor (group A only) does not see group B students",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "supervisor saves grade + feedback + internal note",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "supervisor cannot open a submission from another group",
+    "ok": true,
+    "detail": "status 404"
+  },
+  {
+    "name": "supervisor CSV export only has own students",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "supervisor of another course cannot download the file",
+    "ok": true,
+    "detail": "status 404"
+  },
+  {
+    "name": "student lands on student page",
+    "ok": true,
+    "detail": "http://localhost:3000/student"
+  },
+  {
+    "name": "student sees the feedback",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "student page does not contain the grade",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "student page does not contain the internal note",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "student cannot download a classmate's file",
+    "ok": true,
+    "detail": "status 404"
+  },
+  {
+    "name": "student is redirected away from staff pages",
+    "ok": true,
+    "detail": "status 307"
+  },
+  {
+    "name": "student cannot export performance data",
+    "ok": true,
+    "detail": "status 404"
+  },
+  {
+    "name": "student replaces a submission before the deadline",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "upload of a disguised (non-image) file is rejected",
+    "ok": true,
+    "detail": "status 400"
+  },
+  {
+    "name": "cross-site upload is blocked",
+    "ok": true,
+    "detail": "status 403"
+  },
+  {
+    "name": "student cannot open an assignment of a course they are not in",
+    "ok": true,
+    "detail": "status 404"
+  }
+]

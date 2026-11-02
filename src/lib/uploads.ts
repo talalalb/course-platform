@@ -49,12 +49,10 @@ export function cleanFileName(name: string, extension: string): string {
 }
 
 async function processImage(buf: Buffer, type: Exclude<DetectedType, 'pdf'>): Promise<{ data: Buffer }> {
-  let meta: sharp.Metadata;
-  try {
-    meta = await sharp(buf, { limitInputPixels: MAX_IMAGE_PIXELS }).metadata();
-  } catch {
-    throw new UploadError('الصورة تالفة أو غير مدعومة');
-  }
+  const meta = await sharp(buf, { limitInputPixels: MAX_IMAGE_PIXELS })
+    .metadata()
+    .catch(() => null);
+  if (!meta) throw new UploadError('الصورة تالفة أو غير مدعومة');
   if (meta.format !== type) throw new UploadError('نوع الصورة غير مدعوم');
   try {
     const pipeline = sharp(buf, { limitInputPixels: MAX_IMAGE_PIXELS })
@@ -74,14 +72,17 @@ async function processImage(buf: Buffer, type: Exclude<DetectedType, 'pdf'>): Pr
 }
 
 async function checkPdf(buf: Buffer): Promise<void> {
+  let pages = 0;
   try {
-    await PDFDocument.load(buf, { updateMetadata: false });
+    const doc = await PDFDocument.load(buf, { updateMetadata: false });
+    pages = doc.getPageCount();
   } catch (err) {
-    if (err instanceof EncryptedPDFError) {
+    if (err instanceof EncryptedPDFError || (err instanceof Error && /encrypted/i.test(err.message))) {
       throw new UploadError('ملف PDF محمي بكلمة مرور؛ احفظه بدون حماية ثم ارفعه');
     }
     throw new UploadError('ملف PDF تالف أو غير مدعوم');
   }
+  if (pages < 1) throw new UploadError('ملف PDF فارغ أو تالف');
 }
 
 const MIME: Record<DetectedType, string> = {

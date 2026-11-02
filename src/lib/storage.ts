@@ -13,7 +13,7 @@ export interface Storage {
 }
 
 function storageRoot(): string {
-  return path.resolve(process.env.STORAGE_DIR ?? './storage');
+  return path.resolve(/* turbopackIgnore: true */ process.env.STORAGE_DIR ?? './storage');
 }
 
 function resolveKey(key: string): string {
@@ -21,7 +21,7 @@ function resolveKey(key: string): string {
     throw new Error('Invalid storage key');
   }
   const root = storageRoot();
-  const full = path.resolve(root, key);
+  const full = path.resolve(/* turbopackIgnore: true */ root, key);
   if (!full.startsWith(root + path.sep)) throw new Error('Invalid storage key');
   return full;
 }
@@ -29,14 +29,14 @@ function resolveKey(key: string): string {
 export const localStorage: Storage = {
   async put(key, data) {
     const full = resolveKey(key);
-    await mkdir(path.dirname(full), { recursive: true });
-    await writeFile(full, data, { flag: 'wx' });
+    await mkdir(/* turbopackIgnore: true */ path.dirname(full), { recursive: true });
+    await writeFile(/* turbopackIgnore: true */ full, data, { flag: 'wx' });
   },
   async get(key) {
-    return readFile(resolveKey(key));
+    return readFile(/* turbopackIgnore: true */ resolveKey(key));
   },
   async remove(key) {
-    await rm(resolveKey(key), { force: true });
+    await rm(/* turbopackIgnore: true */ resolveKey(key), { force: true });
   },
 };
 
