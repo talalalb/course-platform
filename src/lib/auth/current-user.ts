@@ -2,13 +2,14 @@ import 'server-only';
 import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { appUrl } from '@/lib/app-url';
 import type { Role } from '@/lib/db/schema';
 import { createSessionRecord, deleteSessionByToken, findUserBySessionToken, type SessionUser } from './sessions';
 
 export const SESSION_COOKIE = 'cp_session';
 
 function cookieSecure(): boolean {
-  return (process.env.APP_URL ?? '').startsWith('https://');
+  return appUrl().startsWith('https://');
 }
 
 export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {

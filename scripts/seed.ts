@@ -2,8 +2,10 @@
  * Fills the database with fictional demo data.
  *   npm run db:seed            (only on an empty database)
  *   npm run db:seed -- --reset (deletes ALL data first; refused when APP_ENV=production)
+ * All demo accounts use DEMO_PASSWORD (default: Demo@12345).
  */
 import 'dotenv/config';
+import path from 'node:path';
 import { sql } from 'drizzle-orm';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import sharp from 'sharp';
@@ -23,7 +25,7 @@ import {
 import { hashPassword } from '@/lib/auth/password';
 import { newStorageKey, storage } from '@/lib/storage';
 
-export const DEMO_PASSWORD = 'Demo@12345';
+export const DEFAULT_DEMO_PASSWORD = 'Demo@12345';
 const DAY = 24 * 60 * 60 * 1000;
 
 async function makePng(title: string, color: string): Promise<Buffer> {
@@ -60,10 +62,17 @@ async function main() {
     return;
   }
   if (reset) {
-    await db.execute(sql`TRUNCATE users, courses, invitations, sessions RESTART IDENTITY CASCADE`);
+    await db.execute(sql`TRUNCATE users, courses, invitations, sessions, stored_files RESTART IDENTITY CASCADE`);
   }
+  const password = process.env.DEMO_PASSWORD || DEFAULT_DEMO_PASSWORD;
+  await loadDemoData(password);
+  console.log('Demo data loaded. All demo accounts use the password:', password);
+  console.log('  admin@demo.test (admin) | khalid@demo.test, noura@demo.test, fahad@demo.test (supervisors) | abdullah@demo.test ... (students)');
+}
 
-  const passwordHash = await hashPassword(DEMO_PASSWORD);
+/** Inserts the fictional demo courses, people and work. Expects an empty database. */
+export async function loadDemoData(password: string) {
+  const passwordHash = await hashPassword(password);
   const mk = (name: string, email: string, role: 'admin' | 'supervisor' | 'student') => ({ name, email, role, passwordHash });
 
   const [admin] = await db.insert(users).values(mk('مدير المنصة', 'admin@demo.test', 'admin')).returning();
@@ -241,14 +250,14 @@ async function main() {
     }
   }
   void d2;
-
-  console.log('Demo data loaded. All demo accounts use the password:', DEMO_PASSWORD);
-  console.log('  admin@demo.test (admin) | khalid@demo.test, noura@demo.test, fahad@demo.test (supervisors) | abdullah@demo.test ... (students)');
 }
 
-main()
-  .catch((err) => {
-    console.error(err);
-    process.exitCode = 1;
-  })
-  .finally(() => getPool().end());
+const isDirectRun = process.argv[1] && path.resolve(process.argv[1]).endsWith(path.join('scripts', 'seed.ts'));
+if (isDirectRun) {
+  main()
+    .catch((err) => {
+      console.error(err);
+      process.exitCode = 1;
+    })
+    .finally(() => getPool().end());
+}

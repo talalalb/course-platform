@@ -1,5 +1,6 @@
 import {
   boolean,
+  customType,
   doublePrecision,
   foreignKey,
   index,
@@ -231,3 +232,16 @@ export const passwordResets = pgTable(
   },
   (t) => [uniqueIndex('password_resets_token_hash_unique').on(t.tokenHash), index('password_resets_user_idx').on(t.userId)],
 );
+
+// Optional file storage inside PostgreSQL (STORAGE_DRIVER=database), for hosts without a persistent disk.
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType() {
+    return 'bytea';
+  },
+});
+
+export const storedFiles = pgTable('stored_files', {
+  key: text('key').primaryKey(),
+  data: bytea('data').notNull(),
+  createdAt: createdAt(),
+});

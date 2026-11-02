@@ -1,6 +1,7 @@
 import { and, eq, gt, inArray, isNull, ne, or } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { courses, groupStudents, groups, invitations, users } from '@/lib/db/schema';
+import { appUrl } from '@/lib/app-url';
 import { hashPassword } from '@/lib/auth/password';
 import { generateToken, hashToken } from '@/lib/auth/tokens';
 
@@ -13,8 +14,7 @@ function inviteExpiry(): Date {
 }
 
 export function inviteUrl(token: string): string {
-  const base = (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/+$/, '');
-  return `${base}/invite/${token}`;
+  return `${appUrl()}/invite/${token}`;
 }
 
 /**

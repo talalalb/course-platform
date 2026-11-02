@@ -10,7 +10,7 @@
     "detail": "status 307, 5893 bytes"
   },
   {
-    "name": "anonymous /admin/groups/46f729e1-a3e5-4aaf-a540-89a6757f79ad leaks no student data",
+    "name": "anonymous /admin/groups/add9eee6-7800-4b41-b344-c77d07aff4ad leaks no student data",
     "ok": true,
     "detail": "status 307, 6489 bytes"
   },
@@ -22,7 +22,7 @@
   {
     "name": "admin lands on admin dashboard",
     "ok": true,
-    "detail": "http://localhost:3000/admin"
+    "detail": "http://localhost:3200/admin"
   },
   {
     "name": "admin dashboard shows group without supervisor",
@@ -32,12 +32,12 @@
   {
     "name": "course page shows real submission counts",
     "ok": true,
-    "detail": "الواجب 1: المتغيرات والشروط منتهي23 أكتوبر 2026، 1:28 م5عرض الحلول"
+    "detail": "الواجب 1: المتغيرات والشروط منتهي23 أكتوبر 2026، 1:52 م5عرض الحلول"
   },
   {
     "name": "admin gets an invitation link",
     "ok": true,
-    "detail": "http://localhost:3000/invite/hrAx_FoKiI9…"
+    "detail": "http://localhost:3200/invite/u2o6QijTljj…"
   },
   {
     "name": "users page lists each supervisor's groups",
@@ -72,7 +72,7 @@
   {
     "name": "logout really ends the session",
     "ok": true,
-    "detail": "http://localhost:3000/login"
+    "detail": "http://localhost:3200/login"
   },
   {
     "name": "password reset link signs the student in with the new password",
@@ -87,7 +87,7 @@
   {
     "name": "supervisor lands on supervisor dashboard",
     "ok": true,
-    "detail": "http://localhost:3000/supervisor"
+    "detail": "http://localhost:3200/supervisor"
   },
   {
     "name": "supervisor (group A only) does not see group B students",
@@ -122,7 +122,7 @@
   {
     "name": "student lands on student page",
     "ok": true,
-    "detail": "http://localhost:3000/student"
+    "detail": "http://localhost:3200/student"
   },
   {
     "name": "student sees the feedback",

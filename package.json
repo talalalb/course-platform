@@ -11,6 +11,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
+    "bootstrap": "tsx scripts/bootstrap.ts",
     "create-admin": "tsx scripts/create-admin.ts",
     "test": "vitest run",
     "test:e2e": "node e2e/run.mjs"

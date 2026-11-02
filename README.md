@@ -57,6 +57,16 @@ npm run dev                   # http://localhost:3000
 ADMIN_EMAIL=you@example.com ADMIN_PASSWORD='كلمة-مرور-طويلة' ADMIN_NAME='اسمك' npm run create-admin
 ```
 
+## رابط تجريبي مجاني (Render)
+
+للتجربة فقط، بدون خادم خاص:
+
+1. في Render: **New → Blueprint** واختر هذا المستودع (يقرأ الإعدادات من `render.yaml`).
+2. أدخل `DEMO_PASSWORD` (كلمة مرور من 8 أحرف أو أكثر لكل الحسابات التجريبية) ثم **Apply**.
+3. بعد اكتمال البناء (5–10 دقائق تقريباً) افتح الرابط `https://….onrender.com` وادخل بـ `admin@demo.test` وكلمة المرور التي اخترتها.
+
+ملاحظات الخطة المجانية: الموقع «ينام» بعد نحو 15 دقيقة بلا زوار فيتأخر أول فتح دقيقة تقريباً، وقاعدة البيانات المجانية مؤقتة. الملفات المرفوعة تُحفظ داخل قاعدة البيانات (`STORAGE_DRIVER=database`) لأن الخطة المجانية بلا قرص دائم. لا تضع بيانات طلاب حقيقية في النسخة التجريبية.
+
 ## النقل إلى الدومين الحقيقي (خادم VPS)
 
 الأسهل استخدام Docker على خادم لينكس صغير (2 معالج / 4GB ذاكرة يكفي للبداية):
@@ -66,7 +76,7 @@ ADMIN_EMAIL=you@example.com ADMIN_PASSWORD='كلمة-مرور-طويلة' ADMIN_
    - `APP_URL` رابط موقعك، مثل `https://courses.example.com`
    - `ADMIN_EMAIL` و `ADMIN_PASSWORD` و `ADMIN_NAME` لحساب المدير الأول
 2. شغّل: `docker compose up -d --build` (يُنشئ الجداول تلقائياً عند كل تشغيل، ويعمل دائماً بوضع الإنتاج فيمنع تحميل البيانات التجريبية).
-3. أنشئ حساب المدير: `docker compose exec app npm run create-admin`
+3. يُنشأ حساب المدير تلقائياً عند أول تشغيل من `ADMIN_EMAIL` و `ADMIN_PASSWORD`. (لتغيير كلمة مروره لاحقاً: `docker compose exec app npm run create-admin`)
 4. ضع أمام المنفذ 3000 خادماً عكسياً يوفر HTTPS، مثل Caddy (يضيف عنوان الزائر تلقائياً، ويستخدمه الموقع للحد من محاولات الدخول):
 
    ```

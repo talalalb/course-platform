@@ -1,6 +1,7 @@
 import { and, eq, gt, isNull } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { passwordResets, sessions, users } from '@/lib/db/schema';
+import { appUrl } from '@/lib/app-url';
 import { hashPassword } from '@/lib/auth/password';
 import { generateToken, hashToken } from '@/lib/auth/tokens';
 
@@ -9,8 +10,7 @@ export const RESET_TTL_HOURS = 48;
 export class ResetError extends Error {}
 
 export function resetUrl(token: string): string {
-  const base = (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/+$/, '');
-  return `${base}/reset/${token}`;
+  return `${appUrl()}/reset/${token}`;
 }
 
 /** Creates a one-time password link for an active user; earlier unused links stop working. */

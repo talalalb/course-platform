@@ -1,0 +1,31 @@
+# Free trial site on Render (https://render.com).
+# Render dashboard -> New -> Blueprint -> choose this repository -> enter DEMO_PASSWORD -> Apply.
+# Free plan limits: the site sleeps after ~15 minutes without visitors (first visit then takes ~1 minute),
+# and the free database is temporary. Uploaded files are kept inside the database (STORAGE_DRIVER=database).
+services:
+  - type: web
+    name: course-platform
+    runtime: docker
+    plan: free
+    region: frankfurt
+    healthCheckPath: /login
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: course-platform-db
+          property: connectionString
+      - key: STORAGE_DRIVER
+        value: database
+      - key: APP_ENV
+        value: demo
+      - key: LOAD_DEMO_DATA
+        value: "true"
+      - key: DEMO_PASSWORD
+        sync: false
+      - key: APP_TIMEZONE
+        value: Asia/Riyadh
+
+databases:
+  - name: course-platform-db
+    plan: free
+    region: frankfurt
